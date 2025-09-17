@@ -51,6 +51,11 @@ SENSOR_TYPES = {
         "unit": "in",
         "device_class": SensorDeviceClass.PRECIPITATION,
     },
+    "feels_like": {
+        "name": "Feels Like",
+        "unit": "°F",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+    },
 }
 
 

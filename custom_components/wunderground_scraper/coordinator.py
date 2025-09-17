@@ -72,6 +72,10 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
             if precip_rate:
                 data["precipitation_rate"] = precip_rate
 
+            feels_like_tag = soup.select_one("div.feels-like span.temp")
+            if feels_like_tag:
+                data["feels_like"] = feels_like_tag.text.replace("°", "")
+
             return data
         except requests.exceptions.RequestException as e:
             raise UpdateFailed(f"Error communicating with Wunderground: {e}") from e
