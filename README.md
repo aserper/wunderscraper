@@ -33,9 +33,36 @@ The following sensors will be created:
 *   💧 Humidity
 *   💨 Wind Speed
 *   💨 Wind Gust
+*   💨 Wind Direction
 *   🎈 Pressure
 *   🌧️ Precipitation Rate
 *   🌧️ Precipitation Accumulation
+*   🌫️ Visibility
+*   ☁️ Sky Condition (Clouds)
+*   ❄️ Snow Depth
+*   ☀️ UV Index*
+*   ☀️ Solar Radiation*
+
+*\* UV Index and Solar Radiation are only available during daylight hours and require stations with these sensors.*
+
+## 🐛 Debugging & Troubleshooting
+
+If sensors are missing or not working correctly, use the included debug scripts:
+
+```bash
+cd debug
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Test your weather station
+python test_sensors.py https://your-pws-url-here
+
+# Find/validate station URLs
+python find_stations.py "Your City, State"
+```
+
+See [debug/README.md](debug/README.md) for detailed debugging instructions.
 
 ---
 
