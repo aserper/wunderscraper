@@ -68,6 +68,48 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
             f"Safari/537.36"
         )
 
+    def _extract_uv_index(self, page_text):
+        """Extract UV Index from JSON data in page source."""
+        import re
+
+        # Look for UV Index in JSON data structures
+        json_patterns = [
+            r'"uvIndex"[:\s]*(\d+)',
+            r'"uv_index"[:\s]*(\d+)',
+            r'"uv"[:\s]*(\d+)'
+        ]
+
+        for pattern in json_patterns:
+            matches = re.findall(pattern, page_text, re.IGNORECASE)
+            if matches:
+                # Return the first valid UV index (0-15 range)
+                for match in matches:
+                    try:
+                        uv_val = int(match)
+                        if 0 <= uv_val <= 15:  # Valid UV index range
+                            return str(uv_val)
+                    except ValueError:
+                        continue
+
+        # Fallback: Look for context patterns
+        context_patterns = [
+            r'(\d+)\s*UV\s*(?:Index)?',
+            r'UV[:\s]*(\d+)'
+        ]
+
+        for pattern in context_patterns:
+            matches = re.findall(pattern, page_text, re.IGNORECASE)
+            if matches:
+                for match in matches:
+                    try:
+                        uv_val = int(match)
+                        if 0 <= uv_val <= 15:
+                            return str(uv_val)
+                    except ValueError:
+                        continue
+
+        return None
+
     async def _async_update_data(self):
         """Update data via scraping."""
         try:
@@ -150,17 +192,10 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
                 if wind_compass:
                     data["wind_direction"] = wind_compass.text.strip()
 
-            # UV Index - may be in additional conditions or separate element
-            uv_index = self._get_value_from_additional_conditions(soup, "UV Index")
+            # UV Index - extract from JSON data in page source
+            uv_index = self._extract_uv_index(response.text)
             if uv_index:
                 data["uv_index"] = uv_index
-            else:
-                # Alternative selector for UV
-                uv_elem = soup.select_one('[class*="uv"]')
-                if uv_elem:
-                    uv_text = uv_elem.text.strip()
-                    if uv_text and uv_text[0].isdigit():
-                        data["uv_index"] = uv_text
 
             # Solar Radiation
             solar = self._get_value_from_additional_conditions(soup, "Solar Radiation")

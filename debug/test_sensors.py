@@ -51,6 +51,32 @@ def generate_user_agent():
     )
 
 
+def extract_uv_index(page_text):
+    """Extract UV Index from JSON data in page source."""
+    import re
+
+    # Look for UV Index in JSON data structures
+    json_patterns = [
+        r'"uvIndex"[:\s]*(\d+)',
+        r'"uv_index"[:\s]*(\d+)',
+        r'"uv"[:\s]*(\d+)'
+    ]
+
+    for pattern in json_patterns:
+        matches = re.findall(pattern, page_text, re.IGNORECASE)
+        if matches:
+            # Return the first valid UV index (0-15 range)
+            for match in matches:
+                try:
+                    uv_val = int(match)
+                    if 0 <= uv_val <= 15:  # Valid UV index range
+                        return str(uv_val)
+                except ValueError:
+                    continue
+
+    return None
+
+
 def fahrenheit_to_celsius(fahrenheit_str):
     """Convert Fahrenheit string to Celsius string."""
     if not fahrenheit_str:
@@ -130,6 +156,11 @@ def test_weather_station(url):
             wind_compass = soup.select_one(".compass-container")
             if wind_compass:
                 sensors['wind_direction'] = wind_compass.text.strip()
+
+        # Extract UV Index from page source (override any previous value)
+        uv_index = extract_uv_index(response.text)
+        if uv_index:
+            sensors['uv_index'] = uv_index
 
         # Print results
         print("\n📊 SENSOR AVAILABILITY REPORT")
