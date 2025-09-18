@@ -122,9 +122,28 @@ async def async_setup_entry(
     ]
 
     sensors = []
+
+    # Define temperature sensor mappings for Celsius creation
+    celsius_mappings = {
+        "temperature_celsius": "temperature",
+        "feels_like_celsius": "feels_like",
+        "dew_point_celsius": "dew_point"
+    }
+
     for sensor_type in SENSOR_TYPES:
-        if coordinator.data and sensor_type in coordinator.data:
+        should_create = False
+
+        if sensor_type in celsius_mappings:
+            # For Celsius sensors, create if the corresponding Fahrenheit sensor exists
+            fahrenheit_sensor = celsius_mappings[sensor_type]
+            should_create = coordinator.data and fahrenheit_sensor in coordinator.data
+        else:
+            # For all other sensors, create if data exists
+            should_create = coordinator.data and sensor_type in coordinator.data
+
+        if should_create:
             sensors.append(WundergroundSensor(coordinator, config_entry, sensor_type))
+
     async_add_entities(sensors)
 
 
@@ -158,8 +177,18 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return (
-            self.coordinator.last_update_success
-            and self.coordinator.data is not None
-            and self._sensor_type in self.coordinator.data
-        )
+        if not (self.coordinator.last_update_success and self.coordinator.data is not None):
+            return False
+
+        # For Celsius sensors, check if corresponding Fahrenheit sensor exists
+        celsius_mappings = {
+            "temperature_celsius": "temperature",
+            "feels_like_celsius": "feels_like",
+            "dew_point_celsius": "dew_point"
+        }
+
+        if self._sensor_type in celsius_mappings:
+            fahrenheit_sensor = celsius_mappings[self._sensor_type]
+            return fahrenheit_sensor in self.coordinator.data
+        else:
+            return self._sensor_type in self.coordinator.data
