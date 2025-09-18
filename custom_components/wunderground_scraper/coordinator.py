@@ -1,5 +1,6 @@
 """Data update coordinator for the Wunderground Scraper integration."""
 import logging
+import random
 from datetime import timedelta
 
 import requests
@@ -54,10 +55,27 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.warning(f"Could not convert temperature '{fahrenheit_str}' to Celsius")
             return None
 
+    def _generate_user_agent(self):
+        """Generate a randomized Chrome user agent string."""
+        # Use realistic Chrome version ranges
+        major_version = random.randint(120, 134)  # Recent Chrome versions (2023-2024)
+        build_number = random.randint(6000, 6500)  # Realistic build range
+        patch_number = random.randint(0, 200)     # Typical patch range
+
+        return (
+            f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            f"(KHTML, like Gecko) Chrome/{major_version}.0.{build_number}.{patch_number} "
+            f"Safari/537.36"
+        )
+
     async def _async_update_data(self):
         """Update data via scraping."""
         try:
-            response = await self.hass.async_add_executor_job(requests.get, self.url)
+            # Generate randomized headers for each request
+            headers = {"User-Agent": self._generate_user_agent()}
+            response = await self.hass.async_add_executor_job(
+                requests.get, self.url, headers=headers
+            )
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
 

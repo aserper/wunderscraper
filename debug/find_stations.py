@@ -7,7 +7,22 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 import re
+import random
 from urllib.parse import urljoin, urlparse
+
+
+def generate_user_agent():
+    """Generate a randomized Chrome user agent string."""
+    # Use realistic Chrome version ranges
+    major_version = random.randint(120, 134)  # Recent Chrome versions (2023-2024)
+    build_number = random.randint(6000, 6500)  # Realistic build range
+    patch_number = random.randint(0, 200)     # Typical patch range
+
+    return (
+        f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        f"(KHTML, like Gecko) Chrome/{major_version}.0.{build_number}.{patch_number} "
+        f"Safari/537.36"
+    )
 
 
 def search_stations_by_location(location):
@@ -48,7 +63,7 @@ def validate_pws_url(url):
 
     # Test if URL is accessible
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (compatible; WundergroundScraper/1.0)'}
+        headers = {'User-Agent': generate_user_agent()}
         response = requests.get(url, headers=headers, timeout=10)
 
         if response.status_code == 200:

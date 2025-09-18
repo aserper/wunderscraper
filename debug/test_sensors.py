@@ -8,6 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import json
+import random
 
 
 def get_value_from_additional_conditions(soup, label):
@@ -36,6 +37,20 @@ def extract_clouds(soup):
     return None
 
 
+def generate_user_agent():
+    """Generate a randomized Chrome user agent string."""
+    # Use realistic Chrome version ranges
+    major_version = random.randint(120, 134)  # Recent Chrome versions (2023-2024)
+    build_number = random.randint(6000, 6500)  # Realistic build range
+    patch_number = random.randint(0, 200)     # Typical patch range
+
+    return (
+        f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        f"(KHTML, like Gecko) Chrome/{major_version}.0.{build_number}.{patch_number} "
+        f"Safari/537.36"
+    )
+
+
 def fahrenheit_to_celsius(fahrenheit_str):
     """Convert Fahrenheit string to Celsius string."""
     if not fahrenheit_str:
@@ -60,7 +75,9 @@ def test_weather_station(url):
     print(f"📅 Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}")
     print("=" * 80)
 
-    headers = {'User-Agent': 'Mozilla/5.0 (compatible; WundergroundScraper/1.0)'}
+    # Generate randomized user agent for each test
+    headers = {'User-Agent': generate_user_agent()}
+    print(f"🤖 User Agent: {headers['User-Agent']}")
 
     try:
         response = requests.get(url, headers=headers, timeout=10)
