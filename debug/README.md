@@ -37,12 +37,12 @@ python test_sensors.py [URL]
 
 **Example:**
 ```bash
-python test_sensors.py https://www.wunderground.com/weather/us/ma/newyork/KNYNEWYO1959
+python test_sensors.py https://www.wunderground.com/dashboard/pws/KNYNEWYO1959
 ```
 
 **Output:**
 ```
-🌦️  Testing Weather Station: https://www.wunderground.com/weather/us/ma/newyork/KNYNEWYO1959
+🌦️  Testing Weather Station: https://www.wunderground.com/dashboard/pws/KNYNEWYO1959
 📅 Test Time: 2025-09-17 22:30:15 EDT
 
 📊 SENSOR AVAILABILITY REPORT
@@ -85,9 +85,9 @@ python find_stations.py https://www.wunderground.com/dashboard/pws/KMABOSTO123
 
 **Example:**
 ```bash
-python find_stations.py https://www.wunderground.com/weather/us/ma/newyork/KNYNEWYO1959
+python find_stations.py https://www.wunderground.com/dashboard/pws/KNYNEWYO1959
 
-🔍 Validating PWS URL: https://www.wunderground.com/weather/us/ma/newyork/KNYNEWYO1959
+🔍 Validating PWS URL: https://www.wunderground.com/dashboard/pws/KNYNEWYO1959
 ✅ URL format looks valid
 ✅ URL is accessible
 ✅ Weather data found (Temperature: 63)

@@ -18,7 +18,7 @@ It provides local weather data directly from a source you choose, without needin
 
 1.  Go to **Settings > Devices & Services**.
 2.  Click **Add Integration** and search for **Wunderground Scraper**.
-3.  Enter the full URL of the Wunderground PWS you want to monitor (e.g., `https://www.wunderground.com/weather/us/ma/newyork/KNYNEWYO1959`).
+3.  Enter the full URL of the Wunderground PWS you want to monitor (e.g., `https://www.wunderground.com/dashboard/pws/KNYNEWYO1959`).
 4.  Click **Submit**.
 
 The integration will automatically create all available sensors. ✅
