@@ -1,5 +1,6 @@
 """Platform for sensor integration."""
 from __future__ import annotations
+import logging
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -9,6 +10,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import WundergroundDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 SENSOR_TYPES = {
     "temperature": {
@@ -59,20 +62,23 @@ SENSOR_TYPES = {
     "temperature_celsius": {
         "name": "Temperature (Celsius)",
         "unit": "°C",
-        "device_class": SensorDeviceClass.TEMPERATURE,
+        "device_class": None,  # Bypass HA's automatic unit conversion
         "state_class": SensorStateClass.MEASUREMENT,
+        "temperature_sensor": True,  # Custom attribute to identify as temperature
     },
     "feels_like_celsius": {
         "name": "Feels Like (Celsius)",
         "unit": "°C",
-        "device_class": SensorDeviceClass.TEMPERATURE,
+        "device_class": None,  # Bypass HA's automatic unit conversion
         "state_class": SensorStateClass.MEASUREMENT,
+        "temperature_sensor": True,  # Custom attribute to identify as temperature
     },
     "dew_point_celsius": {
         "name": "Dew Point (Celsius)",
         "unit": "°C",
-        "device_class": SensorDeviceClass.TEMPERATURE,
+        "device_class": None,  # Bypass HA's automatic unit conversion
         "state_class": SensorStateClass.MEASUREMENT,
+        "temperature_sensor": True,  # Custom attribute to identify as temperature
     },
     "visibility": {
         "name": "Visibility",
@@ -166,6 +172,15 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = sensor_info.get("device_class")
         self._attr_state_class = sensor_info.get("state_class")
         self._attr_unique_id = f"{config_entry.unique_id}_{self._sensor_type}"
+
+        # Add custom attributes for Celsius sensors
+        if sensor_info.get("temperature_sensor"):
+            self._attr_extra_state_attributes = {
+                "temperature_sensor": True,
+                "original_unit": "fahrenheit",
+                "conversion_applied": True
+            }
+
 
     @property
     def native_value(self):
