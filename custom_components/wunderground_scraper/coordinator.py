@@ -36,6 +36,24 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
                         return value_tag.text
         return None
 
+    def _fahrenheit_to_celsius(self, fahrenheit_str):
+        """Convert Fahrenheit string to Celsius string."""
+        if not fahrenheit_str:
+            return None
+
+        try:
+            # Remove any non-numeric characters except for minus sign and decimal point
+            fahrenheit_clean = "".join(c for c in fahrenheit_str if c.isdigit() or c in ['-', '.'])
+            if not fahrenheit_clean:
+                return None
+
+            fahrenheit = float(fahrenheit_clean)
+            celsius = (fahrenheit - 32) * 5 / 9
+            return f"{celsius:.1f}"
+        except (ValueError, TypeError):
+            _LOGGER.warning(f"Could not convert temperature '{fahrenheit_str}' to Celsius")
+            return None
+
     async def _async_update_data(self):
         """Update data via scraping."""
         try:
@@ -135,6 +153,16 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
                     solar_text = solar_elem.text.strip()
                     if solar_text and solar_text[0].isdigit():
                         data["solar_radiation"] = solar_text
+
+            # Convert temperature values to Celsius
+            if "temperature" in data and data["temperature"]:
+                data["temperature_celsius"] = self._fahrenheit_to_celsius(data["temperature"])
+
+            if "feels_like" in data and data["feels_like"]:
+                data["feels_like_celsius"] = self._fahrenheit_to_celsius(data["feels_like"])
+
+            if "dew_point" in data and data["dew_point"]:
+                data["dew_point_celsius"] = self._fahrenheit_to_celsius(data["dew_point"])
 
             return data
         except requests.exceptions.RequestException as e:
