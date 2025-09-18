@@ -1,5 +1,6 @@
 """Platform for sensor integration."""
 from __future__ import annotations
+import logging
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -9,6 +10,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import WundergroundDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 SENSOR_TYPES = {
     "temperature": {
@@ -55,6 +58,27 @@ SENSOR_TYPES = {
         "name": "Feels Like",
         "unit": "°F",
         "device_class": SensorDeviceClass.TEMPERATURE,
+    },
+    "temperature_celsius": {
+        "name": "Temperature (Celsius)",
+        "unit": "°C",
+        "device_class": None,  # Bypass HA's automatic unit conversion
+        "state_class": SensorStateClass.MEASUREMENT,
+        "temperature_sensor": True,  # Custom attribute to identify as temperature
+    },
+    "feels_like_celsius": {
+        "name": "Feels Like (Celsius)",
+        "unit": "°C",
+        "device_class": None,  # Bypass HA's automatic unit conversion
+        "state_class": SensorStateClass.MEASUREMENT,
+        "temperature_sensor": True,  # Custom attribute to identify as temperature
+    },
+    "dew_point_celsius": {
+        "name": "Dew Point (Celsius)",
+        "unit": "°C",
+        "device_class": None,  # Bypass HA's automatic unit conversion
+        "state_class": SensorStateClass.MEASUREMENT,
+        "temperature_sensor": True,  # Custom attribute to identify as temperature
     },
     "visibility": {
         "name": "Visibility",
@@ -104,9 +128,28 @@ async def async_setup_entry(
     ]
 
     sensors = []
+
+    # Define temperature sensor mappings for Celsius creation
+    celsius_mappings = {
+        "temperature_celsius": "temperature",
+        "feels_like_celsius": "feels_like",
+        "dew_point_celsius": "dew_point"
+    }
+
     for sensor_type in SENSOR_TYPES:
-        if coordinator.data and sensor_type in coordinator.data:
+        should_create = False
+
+        if sensor_type in celsius_mappings:
+            # For Celsius sensors, create if the corresponding Fahrenheit sensor exists
+            fahrenheit_sensor = celsius_mappings[sensor_type]
+            should_create = coordinator.data and fahrenheit_sensor in coordinator.data
+        else:
+            # For all other sensors, create if data exists
+            should_create = coordinator.data and sensor_type in coordinator.data
+
+        if should_create:
             sensors.append(WundergroundSensor(coordinator, config_entry, sensor_type))
+
     async_add_entities(sensors)
 
 
@@ -130,6 +173,15 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
         self._attr_state_class = sensor_info.get("state_class")
         self._attr_unique_id = f"{config_entry.unique_id}_{self._sensor_type}"
 
+        # Add custom attributes for Celsius sensors
+        if sensor_info.get("temperature_sensor"):
+            self._attr_extra_state_attributes = {
+                "temperature_sensor": True,
+                "original_unit": "fahrenheit",
+                "conversion_applied": True
+            }
+
+
     @property
     def native_value(self):
         """Return the state of the sensor."""
@@ -140,8 +192,18 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return (
-            self.coordinator.last_update_success
-            and self.coordinator.data is not None
-            and self._sensor_type in self.coordinator.data
-        )
+        if not (self.coordinator.last_update_success and self.coordinator.data is not None):
+            return False
+
+        # For Celsius sensors, check if corresponding Fahrenheit sensor exists
+        celsius_mappings = {
+            "temperature_celsius": "temperature",
+            "feels_like_celsius": "feels_like",
+            "dew_point_celsius": "dew_point"
+        }
+
+        if self._sensor_type in celsius_mappings:
+            fahrenheit_sensor = celsius_mappings[self._sensor_type]
+            return fahrenheit_sensor in self.coordinator.data
+        else:
+            return self._sensor_type in self.coordinator.data

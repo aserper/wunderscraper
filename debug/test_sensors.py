@@ -36,6 +36,24 @@ def extract_clouds(soup):
     return None
 
 
+def fahrenheit_to_celsius(fahrenheit_str):
+    """Convert Fahrenheit string to Celsius string."""
+    if not fahrenheit_str:
+        return None
+
+    try:
+        # Remove any non-numeric characters except for minus sign and decimal point
+        fahrenheit_clean = "".join(c for c in fahrenheit_str if c.isdigit() or c in ['-', '.'])
+        if not fahrenheit_clean:
+            return None
+
+        fahrenheit = float(fahrenheit_clean)
+        celsius = (fahrenheit - 32) * 5 / 9
+        return f"{celsius:.1f}"
+    except (ValueError, TypeError):
+        return None
+
+
 def test_weather_station(url):
     """Test all sensors for a given weather station URL."""
     print(f"🌦️  Testing Weather Station: {url}")
@@ -103,8 +121,11 @@ def test_weather_station(url):
         available_count = 0
         total_count = 0
 
+        # Temperature sensors that need Celsius conversion
+        temp_sensors = ['temperature', 'feels_like', 'dew_point']
+
         sensor_categories = {
-            "🌡️  Temperature Sensors": ['temperature', 'feels_like', 'dew_point'],
+            "🌡️  Temperature Sensors": temp_sensors,
             "💨 Wind Sensors": ['wind_speed', 'wind_gust', 'wind_direction'],
             "💧 Moisture Sensors": ['humidity', 'precipitation_accumulation', 'precipitation_rate'],
             "🌫️  Atmospheric Sensors": ['pressure', 'visibility', 'clouds'],
@@ -118,7 +139,17 @@ def test_weather_station(url):
                 total_count += 1
                 if sensor in sensors and sensors[sensor] is not None:
                     available_count += 1
-                    print(f"  ✅ {sensor:<25}: {sensors[sensor]}")
+                    fahrenheit_value = sensors[sensor]
+
+                    # Show both F and C for temperature sensors
+                    if sensor in temp_sensors:
+                        celsius_value = fahrenheit_to_celsius(fahrenheit_value)
+                        if celsius_value:
+                            print(f"  ✅ {sensor:<25}: {fahrenheit_value}°F ({celsius_value}°C)")
+                        else:
+                            print(f"  ✅ {sensor:<25}: {fahrenheit_value}°F")
+                    else:
+                        print(f"  ✅ {sensor:<25}: {fahrenheit_value}")
                 else:
                     print(f"  ❌ {sensor:<25}: Not available")
 
