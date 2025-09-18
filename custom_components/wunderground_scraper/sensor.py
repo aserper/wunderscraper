@@ -1,7 +1,7 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -56,6 +56,40 @@ SENSOR_TYPES = {
         "unit": "°F",
         "device_class": SensorDeviceClass.TEMPERATURE,
     },
+    "visibility": {
+        "name": "Visibility",
+        "unit": "mi",
+        "device_class": SensorDeviceClass.DISTANCE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "clouds": {
+        "name": "Sky Condition",
+        "unit": None,
+        "device_class": None,
+    },
+    "snow_depth": {
+        "name": "Snow Depth",
+        "unit": "in",
+        "device_class": SensorDeviceClass.DISTANCE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "wind_direction": {
+        "name": "Wind Direction",
+        "unit": "°",
+        "device_class": None,
+    },
+    "uv_index": {
+        "name": "UV Index",
+        "unit": None,
+        "device_class": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "solar_radiation": {
+        "name": "Solar Radiation",
+        "unit": "W/m²",
+        "device_class": SensorDeviceClass.IRRADIANCE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
 }
 
 
@@ -93,6 +127,7 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
         self._attr_name = f"{config_entry.title} {sensor_info['name']}"
         self._attr_native_unit_of_measurement = sensor_info["unit"]
         self._attr_device_class = sensor_info.get("device_class")
+        self._attr_state_class = sensor_info.get("state_class")
         self._attr_unique_id = f"{config_entry.unique_id}_{self._sensor_type}"
 
     @property
