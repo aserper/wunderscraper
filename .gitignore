@@ -1,1 +1,29 @@
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Debug artifacts
+debug/venv/
+debug/sensor_test_results.json
+
+# Documentation files (AI-generated)
+CLAUDE.md
 GEMINI.md
+
+# Home Assistant
+*.log
