@@ -56,6 +56,24 @@ SENSOR_TYPES = {
         "unit": "°F",
         "device_class": SensorDeviceClass.TEMPERATURE,
     },
+    "temperature_celsius": {
+        "name": "Temperature (Celsius)",
+        "unit": "°C",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "feels_like_celsius": {
+        "name": "Feels Like (Celsius)",
+        "unit": "°C",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "dew_point_celsius": {
+        "name": "Dew Point (Celsius)",
+        "unit": "°C",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
     "visibility": {
         "name": "Visibility",
         "unit": "mi",
