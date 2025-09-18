@@ -172,5 +172,5 @@ if __name__ == "__main__":
 
         # Test with default example
         print("Testing with default example...")
-        test_url = "https://www.wunderground.com/weather/us/ma/newyork/KNYNEWYO1959"
+        test_url = "https://www.wunderground.com/dashboard/pws/KNYNEWYO1959"
         validate_pws_url(test_url)

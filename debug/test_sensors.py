@@ -210,7 +210,7 @@ if __name__ == "__main__":
         url = sys.argv[1]
     else:
         # Default test URL
-        url = "https://www.wunderground.com/weather/us/ma/newyork/KNYNEWYO1959"
+        url = "https://www.wunderground.com/dashboard/pws/KNYNEWYO1959"
         print("No URL provided, using default test station")
 
     test_weather_station(url)
