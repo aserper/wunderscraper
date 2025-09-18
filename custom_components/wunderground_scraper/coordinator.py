@@ -73,8 +73,10 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             # Generate randomized headers for each request
             headers = {"User-Agent": self._generate_user_agent()}
+
+            # Use a lambda to properly pass headers to requests.get
             response = await self.hass.async_add_executor_job(
-                requests.get, self.url, headers=headers
+                lambda: requests.get(self.url, headers=headers)
             )
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
