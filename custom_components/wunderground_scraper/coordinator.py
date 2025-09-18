@@ -76,6 +76,66 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
             if feels_like_tag:
                 data["feels_like"] = feels_like_tag.text.replace("°", "")
 
+            # Additional sensors
+            visibility = self._get_value_from_additional_conditions(soup, "Visibility")
+            if visibility:
+                data["visibility"] = visibility
+
+            # Clouds has a different structure - doesn't use wu-value class
+            clouds = None
+            additional_conditions = soup.select_one("lib-additional-conditions")
+            if additional_conditions:
+                for row in additional_conditions.select(".row"):
+                    if "Clouds" in row.text:
+                        # Get all spans and find the one that's not "Clouds"
+                        spans = row.find_all("span")
+                        for span in spans:
+                            text = span.text.strip()
+                            if text and text != "Clouds":
+                                clouds = text
+                                break
+                        break
+            if clouds:
+                data["clouds"] = clouds
+
+            snow_depth = self._get_value_from_additional_conditions(soup, "Snow Depth")
+            if snow_depth:
+                data["snow_depth"] = snow_depth
+
+            # Wind direction - look for compass or wind direction elements
+            wind_dir = soup.select_one(".wind-direction")
+            if wind_dir:
+                data["wind_direction"] = wind_dir.text.strip()
+            else:
+                # Alternative selector for wind direction
+                wind_compass = soup.select_one(".compass-container")
+                if wind_compass:
+                    data["wind_direction"] = wind_compass.text.strip()
+
+            # UV Index - may be in additional conditions or separate element
+            uv_index = self._get_value_from_additional_conditions(soup, "UV Index")
+            if uv_index:
+                data["uv_index"] = uv_index
+            else:
+                # Alternative selector for UV
+                uv_elem = soup.select_one('[class*="uv"]')
+                if uv_elem:
+                    uv_text = uv_elem.text.strip()
+                    if uv_text and uv_text[0].isdigit():
+                        data["uv_index"] = uv_text
+
+            # Solar Radiation
+            solar = self._get_value_from_additional_conditions(soup, "Solar Radiation")
+            if solar:
+                data["solar_radiation"] = solar
+            else:
+                # Alternative selector for solar radiation
+                solar_elem = soup.select_one('[class*="solar"]')
+                if solar_elem:
+                    solar_text = solar_elem.text.strip()
+                    if solar_text and solar_text[0].isdigit():
+                        data["solar_radiation"] = solar_text
+
             return data
         except requests.exceptions.RequestException as e:
             raise UpdateFailed(f"Error communicating with Wunderground: {e}") from e
