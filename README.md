@@ -1,7 +1,5 @@
 # 🌦️ Wunderground Local Scraper - Home Assistant Integration 🏠
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
-
 This is a simple but effective Home Assistant integration that scrapes weather data from a specific Wunderground Personal Weather Station (PWS) page. 📡
 
 It provides local weather data directly from a source you choose, without needing an API key. Just point it at a station URL, and it will create sensor entities for all the key metrics. ✨
