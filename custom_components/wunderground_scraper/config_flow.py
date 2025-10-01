@@ -33,7 +33,7 @@ class WundergroundScraperConfigFlow(config_entries.ConfigFlow):
     @callback
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
-        return WundergroundScraperOptionsFlow(config_entry)
+        return WundergroundScraperOptionsFlow()
 
 
 class WundergroundScraperOptionsFlow(config_entries.OptionsFlow):
