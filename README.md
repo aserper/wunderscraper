@@ -98,9 +98,6 @@ A: This depends on your station:
 - Some stations don't have all sensors installed
 - Check the debug script output to see what's available
 
-**Q: How often does it update?**
-A: Every 5 minutes (configurable in the integration settings)
-
 **Q: Is my data sent to anyone?**
 A: The integration only fetches data from Weather.com (same source Wunderground uses)
 

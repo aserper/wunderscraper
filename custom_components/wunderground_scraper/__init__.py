@@ -15,17 +15,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Get URL - prefer options over data
     url = entry.options.get("url") or entry.data.get("url")
-    
-    # Get update interval from options, fallback to data, then default to 5
-    update_interval = entry.options.get(
-        "update_interval", 
-        entry.data.get("update_interval", 5)
-    )
 
     coordinator = WundergroundDataUpdateCoordinator(
         hass=hass,
         url=url,
-        update_interval=update_interval,
     )
 
     await coordinator.async_config_entry_first_refresh()
