@@ -6,11 +6,11 @@ from homeassistant.core import callback
 from .const import DOMAIN
 
 
-@config_entries.HANDLERS.register(DOMAIN)
 class WundergroundScraperConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for Wunderground Scraper."""
 
     VERSION = 1
+    DOMAIN = DOMAIN
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
