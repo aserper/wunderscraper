@@ -38,6 +38,11 @@ class WundergroundScraperConfigFlow(config_entries.ConfigFlow):
 class WundergroundScraperOptionsFlow(config_entries.OptionsFlow):
     """Handle an options flow for Wunderground Scraper."""
 
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        super().__init__()
+        # config_entry is automatically available as self.config_entry via parent class
+
     async def async_step_init(self, user_input=None):
         """Handle the initial step."""
         if user_input is not None:
