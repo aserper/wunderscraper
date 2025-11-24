@@ -98,5 +98,5 @@ This integration is provided as-is for personal use.
 ---
 
 *Author: Amit Serper* 👋  
-*Repository: [github.com/aserper/wunderground-local-haas](https://github.com/aserper/wunderground-local-haas)* 🔗  
+*Repository: [github.com/aserper/wunderscraper](https://github.com/aserper/wunderscraper)* 🔗  
 *Last Updated: 2025-11-23*
