@@ -1,37 +1,14 @@
-# 🌦️ Wunderground PWS - Home Assistant Integration 🏠
+# Wunderground PWS - Home Assistant Integration
 
-This is a reliable Home Assistant integration that fetches weather data from Wunderground Personal Weather Stations (PWS) using the Weather.com API. 📡
+A Home Assistant integration for fetching weather data from Wunderground Personal Weather Stations.
 
-It provides local weather data directly from any station you choose, with automatic sensor creation for all available metrics. ✨
+## Installation
 
-**Version:** 0.2.0 | **Status:** ✅ Fully Functional
-
-## 🚀 Installation
-
-1.  **Copy the Integration Files:**
-    Copy the `wunderground_scraper` directory from this repository into your Home Assistant `custom_components` directory.
-
-2.  **Restart Home Assistant:**
-    Restart your Home Assistant instance to allow it to detect the new integration.
-
-## ⚙️ Configuration
-
-1.  Go to **Settings > Devices & Services**.
-2.  Click **Add Integration** and search for **Wunderground Scraper**.
-3.  Enter either:
-    - Full Wunderground URL: `https://www.wunderground.com/dashboard/pws/KTXHOUST4430`
-    - Or just the station ID: `KTXHOUST4430`
-4.  Click **Submit**.
-
-The integration will automatically create all available sensors. ✅
-
-**Finding Your Station:**
-- Visit [Wunderground.com](https://www.wunderground.com/)
-- Search for a location or use the map
-- Click on any Personal Weather Station
-- Copy the station ID from the URL (e.g., `KTXHOUST4430`)
-
-> **Note:** You can monitor any public PWS on Wunderground - not just your own!
+1. Copy the `wunderground_scraper` directory to your Home Assistant `custom_components` directory
+2. Restart Home Assistant
+3. Go to Settings > Devices & Services
+4. Click Add Integration and search for "Wunderground Scraper"
+5. Enter a station URL (e.g., `https://www.wunderground.com/dashboard/pws/KTXHOUST4430`) or just the station ID (`KTXHOUST4430`)
 
 ## 📊 Available Sensors
 
