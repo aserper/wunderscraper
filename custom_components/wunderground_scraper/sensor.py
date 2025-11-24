@@ -41,12 +41,12 @@ SENSOR_TYPES = {
     },
     "pressure": {
         "name": "Pressure",
-        "unit": "in",
+        "unit": "inHg",
         "device_class": SensorDeviceClass.PRESSURE,
     },
     "precipitation_rate": {
         "name": "Precipitation Rate",
-        "unit": "in/hr",
+        "unit": "in/h",
         "device_class": SensorDeviceClass.PRECIPITATION_INTENSITY,
     },
     "precipitation_accumulation": {
