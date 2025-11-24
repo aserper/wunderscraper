@@ -3,14 +3,13 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
-from .const import DOMAIN
+DOMAIN = "wunderground_scraper"
 
 
-class WundergroundScraperConfigFlow(config_entries.ConfigFlow):
+class WundergroundScraperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Wunderground Scraper."""
 
     VERSION = 1
-    DOMAIN = DOMAIN
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
