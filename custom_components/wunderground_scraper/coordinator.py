@@ -24,7 +24,17 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
         # Extract station ID from URL
         self.station_id = self._extract_station_id(url)
         if not self.station_id:
-            raise ValueError(f"Could not extract station ID from URL: {url}")
+            _LOGGER.error(
+                "Could not extract station ID from URL: %s. "
+                "Please use a valid Wunderground station URL like: "
+                "https://www.wunderground.com/dashboard/pws/STATIONID or "
+                "https://www.wunderground.com/weather/us/state/city/STATIONID",
+                url
+            )
+            raise ValueError(
+                f"Invalid Wunderground URL: {url}. "
+                "Please reconfigure the integration with a valid station URL or station ID."
+            )
         
         _LOGGER.info(f"Initialized coordinator for station: {self.station_id} (update interval: {update_interval} min)")
         

@@ -13,6 +13,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Wunderground Scraper from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
+    # Get URL from options if available, otherwise from data
+    url = entry.options.get("url") if entry.options else entry.data.get("url")
+    if not url:
+        url = entry.data["url"]
+    
     # Get update interval from options, fallback to data, then default to 5
     update_interval = entry.options.get(
         "update_interval", 
@@ -21,7 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = WundergroundDataUpdateCoordinator(
         hass=hass,
-        url=entry.options.get("url", entry.data["url"]),
+        url=url,
         update_interval=update_interval,
     )
 
