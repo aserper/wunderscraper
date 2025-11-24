@@ -3,32 +3,29 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
-DOMAIN = "wunderground_scraper"
+from .const import DOMAIN
 
 
-class WundergroundScraperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+@config_entries.HANDLERS.register(DOMAIN)
+class WundergroundScraperConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for Wunderground Scraper."""
 
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
+        errors = {}
         if user_input is not None:
-            # Accept any non-empty URL/station ID
-            url = user_input.get("url", "").strip()
-            if url:
-                return self.async_create_entry(title="Wunderground Scraper", data=user_input)
-            else:
-                # Show error if empty
-                return self.async_show_form(
-                    step_id="user",
-                    data_schema=vol.Schema({vol.Required("url"): str}),
-                    errors={"url": "required"},
-                )
+            # Accept the URL/station ID without validation here
+            # The coordinator will validate when it initializes
+            await self.async_set_unique_id(user_input["url"])
+            self._abort_if_unique_id_configured()
+            return self.async_create_entry(title="Wunderground Scraper", data=user_input)
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({vol.Required("url"): str}),
+            errors=errors,
         )
 
     @staticmethod
@@ -46,8 +43,8 @@ class WundergroundScraperOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        # Get current URL from data
-        current_url = self.config_entry.data.get("url", "")
+        # Get current URL from options or data
+        current_url = self.config_entry.options.get("url", self.config_entry.data.get("url", ""))
 
         return self.async_show_form(
             step_id="init",
