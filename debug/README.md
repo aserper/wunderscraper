@@ -11,8 +11,10 @@ python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Test sensor availability
-python test_sensors.py https://your-pws-url
+# Test sensor availability (URL or Station ID)
+python test_sensors.py https://www.wunderground.com/dashboard/pws/KTXHOUST4430
+# or
+python test_sensors.py KTXHOUST4430
 
 # Find/validate station URLs
 python find_stations.py "Your City, State"
@@ -22,46 +24,57 @@ python find_stations.py "Your City, State"
 
 ### 🧪 test_sensors.py
 
-Tests all sensors for a given weather station and shows which ones are available.
+Tests all sensors for a given weather station using the Weather.com PWS API.
 
 **Usage:**
 ```bash
-python test_sensors.py [URL]
+python test_sensors.py [URL or Station ID]
 ```
 
 **Features:**
-- Tests all 15 sensor types (temperature, humidity, UV, solar, etc.)
-- Shows time-based availability (UV/Solar only during day)
-- Exports results to JSON file
+- Uses Weather.com PWS API (same as the integration)
+- Tests all 12 sensor types (temperature, humidity, UV, solar, etc.)
+- Shows both Fahrenheit and Celsius temperatures
+- Shows time-based availability (UV/Solar at 0 during night)
+- Exports results to JSON file with full API response
 - Color-coded output for easy debugging
 
 **Example:**
 ```bash
-python test_sensors.py https://www.wunderground.com/dashboard/pws/KNYNEWYO1959
+# Using full URL
+python test_sensors.py https://www.wunderground.com/dashboard/pws/KTXHOUST4430
+
+# Using just station ID
+python test_sensors.py KTXHOUST4430
 ```
 
 **Output:**
 ```
-🌦️  Testing Weather Station: https://www.wunderground.com/dashboard/pws/KNYNEWYO1959
-📅 Test Time: 2025-09-17 22:30:15 EDT
+🌦️  Testing Weather Station: KTXHOUST4430
+📅 Test Time: 2025-11-23 20:09:42
+================================================================================
+📍 Station ID: KTXHOUST4430
+🔗 API Endpoint: https://api.weather.com/v2/pws/observations/current
+📌 Location: Downtown
+🕐 Last Update: 2025-11-23 19:08:00
 
 📊 SENSOR AVAILABILITY REPORT
 --------------------------------------------------
 
 🌡️  Temperature Sensors:
-  ✅ temperature               : 63
-  ✅ feels_like               : 63
-  ✅ dew_point                : 59
+  ✅ temperature              : 70.3°F (21.3°C)
+  ✅ feels_like               : 70.3°F (21.3°C)
+  ✅ dew_point                : 60.0°F (15.6°C)
 
 💨 Wind Sensors:
-  ✅ wind_speed               : 0
-  ❌ wind_gust                : Not available
-  ❌ wind_direction           : Not available
+  ✅ wind_speed               : 5.8
+  ✅ wind_gust                : 8.1
+  ✅ wind_direction           : 76
 
 📈 SUMMARY:
-  Available: 8/15 sensors
-  Success Rate: 53.3%
-  🌙 Nighttime test - UV/Solar sensors not expected
+  Available: 12/12 sensors
+  Success Rate: 100.0%
+  🌙 Nighttime test - UV/Solar sensors expected to be 0
 ```
 
 ### 🔍 find_stations.py
@@ -95,41 +108,41 @@ python find_stations.py https://www.wunderground.com/dashboard/pws/KNYNEWYO1959
 
 ## Common Issues & Solutions
 
-### ❌ UV Index or Solar Radiation Missing
+### ❌ Station Returns HTTP 204 (No Content)
 
 **Possible Causes:**
-1. **Time of day**: These sensors only report during daylight (6 AM - 6 PM typically)
-2. **Station capability**: Not all PWS have UV/solar sensors
-3. **Weather conditions**: May not report during overcast conditions
+1. Station is offline or not reporting
+2. Station ID doesn't exist
+3. Station was recently removed
 
 **Debug Steps:**
-1. Test during midday hours (10 AM - 4 PM)
-2. Check if the station specs mention UV/solar sensors
-3. Try a different weather station
+1. Verify the station exists by visiting the Wunderground URL in a browser
+2. Try a different nearby station
+3. Check if the station has been updated recently on Wunderground
 
-### ❌ Wind Direction Missing
+### ⚠️  Some Sensors Return Null/None
 
 **Possible Causes:**
-1. Station doesn't have wind vane (direction sensor)
-2. Wind speed is 0 (calm conditions)
-3. Different HTML structure on some stations
+1. **UV/Solar**: Only available during daylight hours with clear skies
+2. **Wind Direction**: May not report when wind speed is 0
+3. **Precipitation**: May not report when not raining
+4. **Station Equipment**: Not all stations have all sensors
 
-**Debug Steps:**
-1. Check during windy conditions
-2. Look for compass/direction elements on the web page
-3. Try alternative stations
+**What's Normal:**
+- UV Index and Solar Radiation are 0.0 at night (not null)
+- Wind direction may be null during calm conditions
+- Some stations only report basic metrics (temp, humidity, pressure)
 
-### ❌ No Sensors Found
+### ❌ "Could not extract station ID from URL"
 
 **Possible Causes:**
 1. Incorrect URL format
-2. Station offline or not reporting
-3. Wunderground page structure changed
+2. URL doesn't contain `/pws/STATIONID`
 
-**Debug Steps:**
-1. Validate URL with `find_stations.py`
-2. Check if station page loads in browser
-3. Try alternative URL formats
+**Solution:**
+Use one of these formats:
+- Full URL: `https://www.wunderground.com/dashboard/pws/KTXHOUST4430`
+- Station ID only: `KTXHOUST4430`
 
 ## Files Generated
 

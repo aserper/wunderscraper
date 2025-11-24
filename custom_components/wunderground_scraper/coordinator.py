@@ -1,10 +1,9 @@
 """Data update coordinator for the Wunderground Scraper integration."""
 import logging
-import random
+import re
 from datetime import timedelta
 
 import requests
-from bs4 import BeautifulSoup
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -12,13 +11,23 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+# Public API key from Wunderground's website source
+API_KEY = "e1f10a1e78da46f5b10a1e78da96f525"
+API_ENDPOINT = "https://api.weather.com/v2/pws/observations/current"
+
 
 class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from the Wunderground website."""
+    """Class to manage fetching data from the Weather.com PWS API."""
 
     def __init__(self, hass, url):
         """Initialize."""
-        self.url = url
+        # Extract station ID from URL
+        self.station_id = self._extract_station_id(url)
+        if not self.station_id:
+            raise ValueError(f"Could not extract station ID from URL: {url}")
+        
+        _LOGGER.info(f"Initialized coordinator for station: {self.station_id}")
+        
         super().__init__(
             hass,
             _LOGGER,
@@ -26,166 +35,122 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(minutes=5),
         )
 
-    def _get_value_from_additional_conditions(self, soup, label):
-        """Get a value from the 'Additional Conditions' section."""
-        additional_conditions = soup.select_one("lib-additional-conditions")
-        if additional_conditions:
-            for row in additional_conditions.select(".row"):
-                if label in row.text:
-                    value_tag = row.select_one("span.wu-value.wu-value-to")
-                    if value_tag:
-                        return value_tag.text
+    def _extract_station_id(self, url):
+        """Extract station ID from Wunderground URL."""
+        # Match pattern like: /pws/STATIONID
+        match = re.search(r'/pws/([A-Z0-9]+)', url)
+        if match:
+            return match.group(1)
+        
+        # If URL is just the station ID itself
+        if re.match(r'^[A-Z0-9]+$', url):
+            return url
+        
         return None
 
-    def _fahrenheit_to_celsius(self, fahrenheit_str):
-        """Convert Fahrenheit string to Celsius string."""
-        if not fahrenheit_str:
+    def _fahrenheit_to_celsius(self, fahrenheit):
+        """Convert Fahrenheit to Celsius."""
+        if fahrenheit is None:
             return None
-
+        
         try:
-            # Remove any non-numeric characters except for minus sign and decimal point
-            fahrenheit_clean = "".join(c for c in fahrenheit_str if c.isdigit() or c in ['-', '.'])
-            if not fahrenheit_clean:
-                return None
-
-            fahrenheit = float(fahrenheit_clean)
-            celsius = (fahrenheit - 32) * 5 / 9
-            return f"{celsius:.1f}"
+            celsius = (float(fahrenheit) - 32) * 5 / 9
+            return round(celsius, 1)
         except (ValueError, TypeError):
-            _LOGGER.warning(f"Could not convert temperature '{fahrenheit_str}' to Celsius")
+            _LOGGER.warning(f"Could not convert temperature '{fahrenheit}' to Celsius")
             return None
-
-    def _generate_user_agent(self):
-        """Generate a randomized Chrome user agent string."""
-        # Use realistic Chrome version ranges
-        major_version = random.randint(120, 134)  # Recent Chrome versions (2023-2024)
-        build_number = random.randint(6000, 6500)  # Realistic build range
-        patch_number = random.randint(0, 200)     # Typical patch range
-
-        return (
-            f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            f"(KHTML, like Gecko) Chrome/{major_version}.0.{build_number}.{patch_number} "
-            f"Safari/537.36"
-        )
 
     async def _async_update_data(self):
-        """Update data via scraping."""
+        """Update data via Weather.com PWS API."""
         try:
-            # Generate randomized headers for each request
-            headers = {"User-Agent": self._generate_user_agent()}
-
-            # Use a lambda to properly pass headers to requests.get
+            # Build API URL
+            params = {
+                'apiKey': API_KEY,
+                'stationId': self.station_id,
+                'format': 'json',
+                'units': 'e',  # Imperial units
+                'numericPrecision': 'decimal'
+            }
+            
+            # Make API request
             response = await self.hass.async_add_executor_job(
-                lambda: requests.get(self.url, headers=headers)
+                lambda: requests.get(API_ENDPOINT, params=params, timeout=10)
             )
+            
+            if response.status_code == 204:
+                raise UpdateFailed(f"Station {self.station_id} is not reporting data (HTTP 204)")
+            
             response.raise_for_status()
-            soup = BeautifulSoup(response.text, "html.parser")
-
+            api_data = response.json()
+            
+            # Extract observation data
+            if not api_data.get('observations') or len(api_data['observations']) == 0:
+                raise UpdateFailed(f"No observations data returned for station {self.station_id}")
+            
+            obs = api_data['observations'][0]
+            imperial = obs.get('imperial', {})
+            
+            # Map API data to Home Assistant sensor format
             data = {}
-            data["temperature"] = soup.select_one("span.wu-value.wu-value-to").text
-            data["dew_point"] = self._get_value_from_additional_conditions(
-                soup, "Dew Point"
-            )
-            data["humidity"] = self._get_value_from_additional_conditions(
-                soup, "Humidity"
-            )
-            data["pressure"] = self._get_value_from_additional_conditions(
-                soup, "Pressure"
-            )
-            data[
-                "precipitation_accumulation"
-            ] = self._get_value_from_additional_conditions(soup, "Rainfall")
-
-            wind_speed_tag = soup.select_one("header.wind-speed strong")
-            if wind_speed_tag:
-                data["wind_speed"] = wind_speed_tag.text
-
-            wind_gust = self._get_value_from_additional_conditions(soup, "Wind Gust")
-            if wind_gust:
-                data["wind_gust"] = wind_gust
-
-            precip_rate = self._get_value_from_additional_conditions(
-                soup, "Precipitation Rate"
-            )
-            if precip_rate:
-                data["precipitation_rate"] = precip_rate
-
-            feels_like_tag = soup.select_one("div.feels-like span.temp")
-            if feels_like_tag:
-                data["feels_like"] = feels_like_tag.text.replace("°", "")
-
-            # Additional sensors
-            visibility = self._get_value_from_additional_conditions(soup, "Visibility")
-            if visibility:
-                data["visibility"] = visibility
-
-            # Clouds has a different structure - doesn't use wu-value class
-            clouds = None
-            additional_conditions = soup.select_one("lib-additional-conditions")
-            if additional_conditions:
-                for row in additional_conditions.select(".row"):
-                    if "Clouds" in row.text:
-                        # Get all spans and find the one that's not "Clouds"
-                        spans = row.find_all("span")
-                        for span in spans:
-                            text = span.text.strip()
-                            if text and text != "Clouds":
-                                clouds = text
-                                break
-                        break
-            if clouds:
-                data["clouds"] = clouds
-
-            snow_depth = self._get_value_from_additional_conditions(soup, "Snow Depth")
-            if snow_depth:
-                data["snow_depth"] = snow_depth
-
-            # Wind direction - look for compass or wind direction elements
-            wind_dir = soup.select_one(".wind-direction")
-            if wind_dir:
-                data["wind_direction"] = wind_dir.text.strip()
-            else:
-                # Alternative selector for wind direction
-                wind_compass = soup.select_one(".compass-container")
-                if wind_compass:
-                    data["wind_direction"] = wind_compass.text.strip()
-
-            # UV Index - may be in additional conditions or separate element
-            uv_index = self._get_value_from_additional_conditions(soup, "UV Index")
-            if uv_index:
-                data["uv_index"] = uv_index
-            else:
-                # Alternative selector for UV
-                uv_elem = soup.select_one('[class*="uv"]')
-                if uv_elem:
-                    uv_text = uv_elem.text.strip()
-                    if uv_text and uv_text[0].isdigit():
-                        data["uv_index"] = uv_text
-
-            # Solar Radiation
-            solar = self._get_value_from_additional_conditions(soup, "Solar Radiation")
-            if solar:
-                data["solar_radiation"] = solar
-            else:
-                # Alternative selector for solar radiation
-                solar_elem = soup.select_one('[class*="solar"]')
-                if solar_elem:
-                    solar_text = solar_elem.text.strip()
-                    if solar_text and solar_text[0].isdigit():
-                        data["solar_radiation"] = solar_text
-
-            # Convert temperature values to Celsius
-            if "temperature" in data and data["temperature"]:
-                data["temperature_celsius"] = self._fahrenheit_to_celsius(data["temperature"])
-
-            if "feels_like" in data and data["feels_like"]:
-                data["feels_like_celsius"] = self._fahrenheit_to_celsius(data["feels_like"])
-
-            if "dew_point" in data and data["dew_point"]:
-                data["dew_point_celsius"] = self._fahrenheit_to_celsius(data["dew_point"])
-
+            
+            # Temperature
+            if imperial.get('temp') is not None:
+                data['temperature'] = imperial['temp']
+                data['temperature_celsius'] = self._fahrenheit_to_celsius(imperial['temp'])
+            
+            # Feels like (use heat index or wind chill, whichever is available)
+            feels_like = imperial.get('heatIndex') or imperial.get('windChill')
+            if feels_like is not None:
+                data['feels_like'] = feels_like
+                data['feels_like_celsius'] = self._fahrenheit_to_celsius(feels_like)
+            
+            # Dew point
+            if imperial.get('dewpt') is not None:
+                data['dew_point'] = imperial['dewpt']
+                data['dew_point_celsius'] = self._fahrenheit_to_celsius(imperial['dewpt'])
+            
+            # Humidity
+            if obs.get('humidity') is not None:
+                data['humidity'] = obs['humidity']
+            
+            # Pressure
+            if imperial.get('pressure') is not None:
+                data['pressure'] = imperial['pressure']
+            
+            # Wind
+            if imperial.get('windSpeed') is not None:
+                data['wind_speed'] = imperial['windSpeed']
+            
+            if imperial.get('windGust') is not None:
+                data['wind_gust'] = imperial['windGust']
+            
+            if obs.get('winddir') is not None:
+                data['wind_direction'] = obs['winddir']
+            
+            # Precipitation
+            if imperial.get('precipRate') is not None:
+                data['precipitation_rate'] = imperial['precipRate']
+            
+            if imperial.get('precipTotal') is not None:
+                data['precipitation_accumulation'] = imperial['precipTotal']
+            
+            # Solar radiation
+            if obs.get('solarRadiation') is not None:
+                data['solar_radiation'] = obs['solarRadiation']
+            
+            # UV index
+            if obs.get('uv') is not None:
+                data['uv_index'] = obs['uv']
+            
+            _LOGGER.debug(f"Successfully fetched data for {self.station_id}: {len(data)} sensors")
+            
             return data
+            
+        except requests.exceptions.Timeout:
+            raise UpdateFailed(f"Timeout while fetching data for station {self.station_id}")
         except requests.exceptions.RequestException as e:
-            raise UpdateFailed(f"Error communicating with Wunderground: {e}") from e
+            raise UpdateFailed(f"Error communicating with Weather.com API: {e}") from e
+        except (KeyError, ValueError) as e:
+            raise UpdateFailed(f"Error parsing API response: {e}") from e
         except Exception as e:
-            raise UpdateFailed(f"An unexpected error occurred: {e}") from e
+            raise UpdateFailed(f"Unexpected error occurred: {e}") from e

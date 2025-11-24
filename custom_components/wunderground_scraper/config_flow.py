@@ -1,4 +1,5 @@
 """Config flow for Wunderground Scraper."""
+import re
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -12,16 +13,36 @@ class WundergroundScraperConfigFlow(config_entries.ConfigFlow):
 
     VERSION = 1
 
+    def _validate_station_url(self, url):
+        """Validate and extract station ID from URL."""
+        # Match Wunderground PWS URL pattern
+        match = re.search(r'/pws/([A-Z0-9]+)', url)
+        if match:
+            return match.group(1)
+        
+        # If it's just a station ID
+        if re.match(r'^[A-Z0-9]+$', url):
+            return url
+        
+        return None
+
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            # Here you would validate the user input, for example,
-            # check if the URL is a valid Wunderground URL.
-            # For now, we'll just accept any URL.
-            await self.async_set_unique_id(user_input["url"])
-            self._abort_if_unique_id_configured()
-            return self.async_create_entry(title="Wunderground Scraper", data=user_input)
+            # Validate the station URL/ID
+            station_id = self._validate_station_url(user_input["url"])
+            
+            if not station_id:
+                errors["url"] = "invalid_station_url"
+            else:
+                # Use station ID as unique identifier
+                await self.async_set_unique_id(station_id)
+                self._abort_if_unique_id_configured()
+                
+                # Create entry with a friendly title
+                title = f"Wunderground {station_id}"
+                return self.async_create_entry(title=title, data=user_input)
 
         return self.async_show_form(
             step_id="user",

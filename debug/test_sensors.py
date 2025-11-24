@@ -1,135 +1,137 @@
 #!/usr/bin/env python3
 """
-Debug script to test sensor availability from a Wunderground PWS page.
-Usage: python debug/test_sensors.py [URL]
+Debug script to test sensor availability from a Wunderground PWS station.
+Usage: python debug/test_sensors.py [URL or Station ID]
 """
 import sys
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 import json
-import random
+import re
+
+# Public API key from Wunderground's website source
+API_KEY = "e1f10a1e78da46f5b10a1e78da96f525"
+API_ENDPOINT = "https://api.weather.com/v2/pws/observations/current"
 
 
-def get_value_from_additional_conditions(soup, label):
-    """Extract value from additional conditions section."""
-    additional_conditions = soup.select_one("lib-additional-conditions")
-    if additional_conditions:
-        for row in additional_conditions.select(".row"):
-            if label in row.text:
-                value_tag = row.select_one("span.wu-value.wu-value-to")
-                if value_tag:
-                    return value_tag.text
+def extract_station_id(url):
+    """Extract station ID from Wunderground URL or return as-is if already an ID."""
+    # Match pattern like: /pws/STATIONID
+    match = re.search(r'/pws/([A-Z0-9]+)', url)
+    if match:
+        return match.group(1)
+    
+    # If it's just a station ID
+    if re.match(r'^[A-Z0-9]+$', url):
+        return url
+    
     return None
 
 
-def extract_clouds(soup):
-    """Extract clouds/sky condition with special handling."""
-    additional_conditions = soup.select_one("lib-additional-conditions")
-    if additional_conditions:
-        for row in additional_conditions.select(".row"):
-            if "Clouds" in row.text:
-                spans = row.find_all("span")
-                for span in spans:
-                    text = span.text.strip()
-                    if text and text != "Clouds":
-                        return text
-    return None
-
-
-def generate_user_agent():
-    """Generate a randomized Chrome user agent string."""
-    # Use realistic Chrome version ranges
-    major_version = random.randint(120, 134)  # Recent Chrome versions (2023-2024)
-    build_number = random.randint(6000, 6500)  # Realistic build range
-    patch_number = random.randint(0, 200)     # Typical patch range
-
-    return (
-        f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        f"(KHTML, like Gecko) Chrome/{major_version}.0.{build_number}.{patch_number} "
-        f"Safari/537.36"
-    )
-
-
-def fahrenheit_to_celsius(fahrenheit_str):
-    """Convert Fahrenheit string to Celsius string."""
-    if not fahrenheit_str:
+def fahrenheit_to_celsius(fahrenheit):
+    """Convert Fahrenheit to Celsius."""
+    if fahrenheit is None:
         return None
 
     try:
-        # Remove any non-numeric characters except for minus sign and decimal point
-        fahrenheit_clean = "".join(c for c in fahrenheit_str if c.isdigit() or c in ['-', '.'])
-        if not fahrenheit_clean:
-            return None
-
-        fahrenheit = float(fahrenheit_clean)
-        celsius = (fahrenheit - 32) * 5 / 9
+        celsius = (float(fahrenheit) - 32) * 5 / 9
         return f"{celsius:.1f}"
     except (ValueError, TypeError):
         return None
 
 
-def test_weather_station(url):
-    """Test all sensors for a given weather station URL."""
-    print(f"🌦️  Testing Weather Station: {url}")
-    print(f"📅 Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}")
+def test_weather_station(url_or_id):
+    """Test all sensors for a given weather station using the API."""
+    print(f"🌦️  Testing Weather Station: {url_or_id}")
+    print(f"📅 Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 80)
 
-    # Generate randomized user agent for each test
-    headers = {'User-Agent': generate_user_agent()}
-    print(f"🤖 User Agent: {headers['User-Agent']}")
-
+    # Extract station ID
+    station_id = extract_station_id(url_or_id)
+    
+    if not station_id:
+        print(f"❌ Could not extract station ID from: {url_or_id}")
+        print(f"   Please provide a valid Wunderground URL or station ID")
+        return False
+    
+    print(f"📍 Station ID: {station_id}")
+    
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        # Build API request
+        params = {
+            'apiKey': API_KEY,
+            'stationId': station_id,
+            'format': 'json',
+            'units': 'e',
+            'numericPrecision': 'decimal'
+        }
+        
+        print(f"🔗 API Endpoint: {API_ENDPOINT}")
+        
+        # Make API request
+        response = requests.get(API_ENDPOINT, params=params, timeout=10)
+        
+        if response.status_code == 204:
+            print(f"❌ Station {station_id} is not reporting data (HTTP 204)")
+            print(f"   The station may be offline or doesn't exist")
+            return False
+        
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # Test all sensors
+        api_data = response.json()
+        
+        # Extract observation data
+        if not api_data.get('observations') or len(api_data['observations']) == 0:
+            print(f"❌ No observations data returned for station {station_id}")
+            return False
+        
+        obs = api_data['observations'][0]
+        imperial = obs.get('imperial', {})
+        
+        print(f"📌 Location: {obs.get('neighborhood', 'Unknown')}")
+        print(f"🕐 Last Update: {obs.get('obsTimeLocal', 'Unknown')}")
+        print(f"🌍 Coordinates: {obs.get('lat')}°, {obs.get('lon')}°")
+        
+        # Map API data to sensors
         sensors = {}
-
-        # Basic sensors
-        temp_elem = soup.select_one("span.wu-value.wu-value-to")
-        sensors['temperature'] = temp_elem.text if temp_elem else None
-
-        feels_like_elem = soup.select_one("div.feels-like span.temp")
-        sensors['feels_like'] = feels_like_elem.text.replace("°", "") if feels_like_elem else None
-
-        wind_speed_elem = soup.select_one("header.wind-speed strong")
-        sensors['wind_speed'] = wind_speed_elem.text if wind_speed_elem else None
-
-        # Additional conditions sensors
-        additional_sensors = [
-            'Pressure', 'Visibility', 'Dew Point', 'Humidity',
-            'Rainfall', 'Snow Depth', 'Wind Gust', 'Precipitation Rate',
-            'UV Index', 'UV', 'Solar Radiation', 'Solar'
-        ]
-
-        for sensor in additional_sensors:
-            value = get_value_from_additional_conditions(soup, sensor)
-            if value:
-                # Map to our sensor names
-                if sensor == 'Rainfall':
-                    sensors['precipitation_accumulation'] = value
-                elif sensor == 'Dew Point':
-                    sensors['dew_point'] = value
-                elif sensor in ['UV Index', 'UV']:
-                    sensors['uv_index'] = value
-                elif sensor in ['Solar Radiation', 'Solar']:
-                    sensors['solar_radiation'] = value
-                else:
-                    sensors[sensor.lower().replace(' ', '_')] = value
-
-        # Special handling for clouds
-        sensors['clouds'] = extract_clouds(soup)
-
-        # Wind direction
-        wind_dir = soup.select_one(".wind-direction")
-        if wind_dir:
-            sensors['wind_direction'] = wind_dir.text.strip()
-        else:
-            wind_compass = soup.select_one(".compass-container")
-            if wind_compass:
-                sensors['wind_direction'] = wind_compass.text.strip()
+        
+        # Temperature sensors
+        if imperial.get('temp') is not None:
+            sensors['temperature'] = str(imperial['temp'])
+        
+        feels_like = imperial.get('heatIndex') or imperial.get('windChill')
+        if feels_like is not None:
+            sensors['feels_like'] = str(feels_like)
+        
+        if imperial.get('dewpt') is not None:
+            sensors['dew_point'] = str(imperial['dewpt'])
+        
+        # Other sensors
+        if obs.get('humidity') is not None:
+            sensors['humidity'] = str(obs['humidity'])
+        
+        if imperial.get('pressure') is not None:
+            sensors['pressure'] = str(imperial['pressure'])
+        
+        if imperial.get('windSpeed') is not None:
+            sensors['wind_speed'] = str(imperial['windSpeed'])
+        
+        if imperial.get('windGust') is not None:
+            sensors['wind_gust'] = str(imperial['windGust'])
+        
+        if obs.get('winddir') is not None:
+            sensors['wind_direction'] = str(obs['winddir'])
+        
+        if imperial.get('precipRate') is not None:
+            sensors['precipitation_rate'] = str(imperial['precipRate'])
+        
+        if imperial.get('precipTotal') is not None:
+            sensors['precipitation_accumulation'] = str(imperial['precipTotal'])
+        
+        if obs.get('solarRadiation') is not None:
+            sensors['solar_radiation'] = str(obs['solarRadiation'])
+        
+        if obs.get('uv') is not None:
+            sensors['uv_index'] = str(obs['uv'])
 
         # Print results
         print("\n📊 SENSOR AVAILABILITY REPORT")
@@ -145,8 +147,7 @@ def test_weather_station(url):
             "🌡️  Temperature Sensors": temp_sensors,
             "💨 Wind Sensors": ['wind_speed', 'wind_gust', 'wind_direction'],
             "💧 Moisture Sensors": ['humidity', 'precipitation_accumulation', 'precipitation_rate'],
-            "🌫️  Atmospheric Sensors": ['pressure', 'visibility', 'clouds'],
-            "❄️  Winter Sensors": ['snow_depth'],
+            "🌫️  Atmospheric Sensors": ['pressure'],
             "☀️  Solar Sensors": ['uv_index', 'solar_radiation']
         }
 
@@ -156,17 +157,17 @@ def test_weather_station(url):
                 total_count += 1
                 if sensor in sensors and sensors[sensor] is not None:
                     available_count += 1
-                    fahrenheit_value = sensors[sensor]
+                    value = sensors[sensor]
 
                     # Show both F and C for temperature sensors
                     if sensor in temp_sensors:
-                        celsius_value = fahrenheit_to_celsius(fahrenheit_value)
+                        celsius_value = fahrenheit_to_celsius(float(value))
                         if celsius_value:
-                            print(f"  ✅ {sensor:<25}: {fahrenheit_value}°F ({celsius_value}°C)")
+                            print(f"  ✅ {sensor:<25}: {value}°F ({celsius_value}°C)")
                         else:
-                            print(f"  ✅ {sensor:<25}: {fahrenheit_value}°F")
+                            print(f"  ✅ {sensor:<25}: {value}°F")
                     else:
-                        print(f"  ✅ {sensor:<25}: {fahrenheit_value}")
+                        print(f"  ✅ {sensor:<25}: {value}")
                 else:
                     print(f"  ❌ {sensor:<25}: Not available")
 
@@ -179,15 +180,17 @@ def test_weather_station(url):
         if 6 <= current_hour <= 18:
             print(f"  ☀️  Daytime test - UV/Solar sensors should be available if supported")
         else:
-            print(f"  🌙 Nighttime test - UV/Solar sensors not expected")
+            print(f"  🌙 Nighttime test - UV/Solar sensors expected to be 0")
 
         # Export data
         export_data = {
             'timestamp': datetime.now().isoformat(),
-            'url': url,
+            'station_id': station_id,
+            'neighborhood': obs.get('neighborhood'),
             'sensors': {k: v for k, v in sensors.items() if v is not None},
             'available_count': available_count,
-            'total_count': total_count
+            'total_count': total_count,
+            'api_response': api_data
         }
 
         with open('sensor_test_results.json', 'w') as f:
@@ -199,7 +202,9 @@ def test_weather_station(url):
         print(f"❌ Network Error: {e}")
         return False
     except Exception as e:
-        print(f"❌ Parsing Error: {e}")
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
     return True
@@ -207,10 +212,10 @@ def test_weather_station(url):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        url = sys.argv[1]
+        url_or_id = sys.argv[1]
     else:
-        # Default test URL
-        url = "https://www.wunderground.com/dashboard/pws/KNYNEWYO1959"
-        print("No URL provided, using default test station")
+        # Default test station with good data
+        url_or_id = "KTXHOUST4430"
+        print("No URL/ID provided, using default test station\n")
 
-    test_weather_station(url)
+    test_weather_station(url_or_id)
