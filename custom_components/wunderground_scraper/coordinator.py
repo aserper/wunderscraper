@@ -37,8 +37,18 @@ class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _extract_station_id(self, url):
         """Extract station ID from Wunderground URL."""
-        # Match pattern like: /pws/STATIONID
+        # Match pattern like: /pws/STATIONID (dashboard URL)
         match = re.search(r'/pws/([A-Z0-9]+)', url)
+        if match:
+            return match.group(1)
+        
+        # Match pattern like: /weather/us/ma/city/STATIONID (weather page URL)
+        match = re.search(r'/weather/[^/]+/[^/]+/[^/]+/([A-Z0-9]+)', url)
+        if match:
+            return match.group(1)
+        
+        # Match any URL ending with a station ID pattern
+        match = re.search(r'/([A-Z]{2,4}[A-Z0-9]+\d+)/?$', url)
         if match:
             return match.group(1)
         
