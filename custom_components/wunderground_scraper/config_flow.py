@@ -47,14 +47,18 @@ class WundergroundScraperOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        # Get current URL from options or data
+        # Get current values from options or defaults
         current_url = self.config_entry.options.get("url", self.config_entry.data.get("url", ""))
+        current_interval = self.config_entry.options.get("update_interval", 5)
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required("url", default=current_url): str
+                    vol.Required("url", default=current_url): str,
+                    vol.Optional("update_interval", default=current_interval): vol.All(
+                        vol.Coerce(int), vol.Range(min=1, max=60)
+                    ),
                 }
             ),
         )

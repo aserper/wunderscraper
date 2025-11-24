@@ -20,9 +20,13 @@
     "step": {
       "init": {
         "title": "Wunderground PWS Options",
-        "description": "Update your Wunderground station",
+        "description": "Update your Wunderground station settings",
         "data": {
-          "url": "Station URL or ID"
+          "url": "Station URL or ID",
+          "update_interval": "Update interval (minutes)"
+        },
+        "data_description": {
+          "update_interval": "How often to fetch new data (1-60 minutes)"
         }
       }
     }

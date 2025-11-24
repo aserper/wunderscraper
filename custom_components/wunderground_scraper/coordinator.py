@@ -19,20 +19,20 @@ API_ENDPOINT = "https://api.weather.com/v2/pws/observations/current"
 class WundergroundDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the Weather.com PWS API."""
 
-    def __init__(self, hass, url):
+    def __init__(self, hass, url, update_interval=5):
         """Initialize."""
         # Extract station ID from URL
         self.station_id = self._extract_station_id(url)
         if not self.station_id:
             raise ValueError(f"Could not extract station ID from URL: {url}")
         
-        _LOGGER.info(f"Initialized coordinator for station: {self.station_id}")
+        _LOGGER.info(f"Initialized coordinator for station: {self.station_id} (update interval: {update_interval} min)")
         
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(minutes=5),
+            update_interval=timedelta(minutes=update_interval),
         )
 
     def _extract_station_id(self, url):
