@@ -2,10 +2,10 @@
   "domain": "wunderground_scraper",
   "name": "Wunderground Scraper",
   "config_flow": true,
-  "documentation": "https://github.com/aserper/wunderground-local-haas",
-  "issue_tracker": "https://github.com/aserper/wunderground-local-haas/issues",
+  "documentation": "https://gitea.amit.wtf/amit/wunderground-theif",
+  "issue_tracker": "https://gitea.amit.wtf/amit/wunderground-theif/issues",
   "codeowners": ["Amit Serper"],
-  "version": "0.2.0",
+  "version": "0.3.0",
   "iot_class": "cloud_polling",
   "requirements": ["requests"]
 }

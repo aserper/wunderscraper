@@ -191,8 +191,14 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        if not (self.coordinator.last_update_success and self.coordinator.data is not None):
+        """Return if entity is available.
+
+        Availability is driven by whether this sensor has a value in
+        coordinator.data, not by coordinator.last_update_success. The
+        coordinator serves its last good reading through short upstream
+        outages, and the sensors should stay available for the duration.
+        """
+        if not self.coordinator.data:
             return False
 
         # For Celsius sensors, check if corresponding Fahrenheit sensor exists
@@ -207,3 +213,11 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
             return fahrenheit_sensor in self.coordinator.data
         else:
             return self._sensor_type in self.coordinator.data
+
+    @property
+    def extra_state_attributes(self):
+        """Expose whether the reading is held over from an earlier poll."""
+        attrs = dict(self._attr_extra_state_attributes or {})
+        if getattr(self.coordinator, "using_cached_data", False):
+            attrs["stale"] = True
+        return attrs

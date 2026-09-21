@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.3.0] - 2026-09-20
+
+### Fixed - Survive intermittent Weather.com API outages
+
+The Weather.com edge (`api.weather.com`, Fastly-fronted) intermittently accepts
+no TCP connection at all. Measured from this network: roughly 1 in 4 requests
+stalled with `conn=0` until timeout, while `www.wunderground.com` and other
+Fastly-fronted hosts were unaffected.
+
+Previously a single failed poll marked all 15 sensors unavailable, so a ~25%
+upstream failure rate blanked the whole integration in the dashboard and in
+recorder history. On 2026-09-20 this produced 27 outages in 167 polls, each
+blinking every entity to `unavailable`.
+
+**1. Retry transient failures**
+
+- New `fetch_with_retry()` retries connection/timeout/5xx faults up to 3
+  attempts with linear backoff (3s, 6s).
+- Failures that retrying cannot fix (HTTP 204 station-silent, unusable payload)
+  are raised immediately without retrying.
+
+**2. Hold the last reading through short outages**
+
+- The coordinator caches the last successful reading and serves it while polls
+  fail, so brief upstream blips no longer create gaps in history.
+- After `MAX_CONSECUTIVE_FAILURES` (6 polls, 30 minutes at the default 5 minute
+  interval) it stops serving the stale reading and raises, so a genuinely dead
+  station still surfaces as unavailable.
+- A permanently silent station (HTTP 204) clears the cache rather than serving
+  stale values.
+- Sensors now derive availability from the presence of their own value in
+  `coordinator.data` rather than `coordinator.last_update_success`, so they stay
+  available while a held reading is being served.
+- While serving a held reading, sensors expose `stale: true` so consumers can
+  tell a cached value from a fresh one.
+
+**3. Metadata fixes**
+
+- `manifest.json` `documentation` and `issue_tracker` pointed at
+  `github.com/aserper/wunderground-local-haas`, which returns 404. Now points at
+  the real repository.
+
+### Testing
+
+`debug/test_retry_logic.py` runs without Home Assistant by stubbing the two HA
+modules the coordinator imports. Covers station ID extraction, Celsius
+conversion, retry-on-transient, no-retry-on-permanent, attempt exhaustion, the
+stale-hold window, give-up-after-max-failures, and 204 handling.
+
+```bash
+python3 debug/test_retry_logic.py
+```
+
 ## [0.2.0] - 2025-11-23
 
 ### Changed - Major Rewrite to Use API Instead of Web Scraping
