@@ -217,7 +217,10 @@ class WundergroundSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Expose whether the reading is held over from an earlier poll."""
-        attrs = dict(self._attr_extra_state_attributes or {})
+        # _attr_extra_state_attributes is only set for the Celsius sensors, so
+        # reading it directly raises AttributeError for every other sensor and
+        # Home Assistant refuses to add the entity.
+        attrs = dict(getattr(self, "_attr_extra_state_attributes", None) or {})
         if getattr(self.coordinator, "using_cached_data", False):
             attrs["stale"] = True
         return attrs

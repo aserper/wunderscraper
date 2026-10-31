@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2] - 2026-10-31
+
+### Fixed - Sensor entities refused to be added
+
+`extra_state_attributes` read `self._attr_extra_state_attributes` directly, but
+that attribute is only assigned for the three Celsius sensors. Every other
+sensor raised `AttributeError` during entity creation, so Home Assistant logged
+"Error adding entity" for 12 of 15 sensors and left them `unavailable` even
+though the coordinator was fetching fine. Now uses `getattr(...)`.
+
 ## [0.3.1] - 2026-10-31
 
 ### Fixed - Throttled API key blanked every sensor
