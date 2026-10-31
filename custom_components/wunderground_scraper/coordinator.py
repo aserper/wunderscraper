@@ -12,8 +12,15 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Public API key from Wunderground's website source
-API_KEY = "e1f10a1e78da46f5b10a1e78da96f525"
+# Public API keys harvested from Wunderground's website source. Weather.com
+# throttles a shared key without warning (HTTP 401 "API key is throttled"),
+# which blanks every sensor until someone notices, so keep spares and fall
+# through to the next key when the current one is refused.
+API_KEYS = (
+    "6532d6454b8aa370768e63d6ba5a832e",
+    "e1f10a1e78da46f5b10a1e78da96f525",
+)
+API_KEY = API_KEYS[0]
 API_ENDPOINT = "https://api.weather.com/v2/pws/observations/current"
 
 # Weather.com's edge intermittently accepts no TCP connection at all (observed
@@ -142,40 +149,60 @@ def fetch_observations(station_id, timeout=API_TIMEOUT):
 
     Blocking; intended to run in an executor. Raises TransientFetchError for
     faults worth retrying (dropped connection, timeout, 5xx) and UpdateFailed
-    for conditions retrying will not fix (204, unusable payload).
+    for conditions retrying will not fix (204, unusable payload, every API key
+    refused).
     """
-    params = {
-        'apiKey': API_KEY,
-        'stationId': station_id,
-        'format': 'json',
-        'units': 'e',  # Imperial units
-        'numericPrecision': 'decimal',
-    }
+    last_auth_error = None
 
-    try:
-        response = requests.get(API_ENDPOINT, params=params, timeout=timeout)
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as err:
-        # ConnectionError covers ConnectTimeout, which is what a dropped TCP
-        # connection to the edge produces.
-        raise TransientFetchError(f"Could not reach Weather.com API: {err}") from err
-    except requests.exceptions.RequestException as err:
-        raise TransientFetchError(f"Error communicating with Weather.com API: {err}") from err
+    for api_key in API_KEYS:
+        params = {
+            'apiKey': api_key,
+            'stationId': station_id,
+            'format': 'json',
+            'units': 'e',  # Imperial units
+            'numericPrecision': 'decimal',
+        }
 
-    if response.status_code == 204:
-        raise UpdateFailed(f"Station {station_id} is not reporting data (HTTP 204)")
+        try:
+            response = requests.get(API_ENDPOINT, params=params, timeout=timeout)
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as err:
+            # ConnectionError covers ConnectTimeout, which is what a dropped TCP
+            # connection to the edge produces.
+            raise TransientFetchError(f"Could not reach Weather.com API: {err}") from err
+        except requests.exceptions.RequestException as err:
+            raise TransientFetchError(f"Error communicating with Weather.com API: {err}") from err
 
-    if response.status_code >= 500:
-        raise TransientFetchError(
-            f"Weather.com API returned HTTP {response.status_code}"
-        )
+        if response.status_code in (401, 403):
+            # Throttled or revoked key: rotating is the only fix, so try the next
+            # one rather than blanking every sensor for as long as it stays dead.
+            last_auth_error = (
+                f"HTTP {response.status_code}: {response.text[:120].strip()}"
+            )
+            _LOGGER.warning(
+                "Weather.com refused API key %s… (%s); trying next key",
+                api_key[:6], last_auth_error,
+            )
+            continue
 
-    try:
-        response.raise_for_status()
-        api_data = response.json()
-    except (requests.exceptions.RequestException, ValueError) as err:
-        raise UpdateFailed(f"Error parsing API response: {err}") from err
+        if response.status_code == 204:
+            raise UpdateFailed(f"Station {station_id} is not reporting data (HTTP 204)")
 
-    return parse_observations(api_data, station_id)
+        if response.status_code >= 500:
+            raise TransientFetchError(
+                f"Weather.com API returned HTTP {response.status_code}"
+            )
+
+        try:
+            response.raise_for_status()
+            api_data = response.json()
+        except (requests.exceptions.RequestException, ValueError) as err:
+            raise UpdateFailed(f"Error parsing API response: {err}") from err
+
+        return parse_observations(api_data, station_id)
+
+    raise UpdateFailed(
+        f"No working Weather.com API key for station {station_id} ({last_auth_error})"
+    )
 
 
 async def fetch_with_retry(fetch, attempts=MAX_ATTEMPTS, backoff=RETRY_BACKOFF_SECONDS):

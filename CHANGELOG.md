@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.1] - 2026-10-31
+
+### Fixed - Throttled API key blanked every sensor
+
+Weather.com started answering the hardcoded public key with
+`401 API key is throttled`. That is neither a transient fault nor a silent
+station, so it went down the `UpdateFailed` path: cache cleared, no retry, and
+all 15 sensors sat `unavailable` from 2026-10-21 onward.
+
+- `API_KEYS` is now a list. On `401`/`403` the coordinator rotates to the next
+  key and only fails once every key has been refused, so one throttled key no
+  longer takes the integration down for days.
+- First key replaced with a currently working Weather.com public key; the old
+  key is kept as a fallback.
+- `debug/test_key_rotation.py` covers rotation, all-keys-refused, and the
+  HTTP 204 path (runs with no Home Assistant installed).
+
 ## [0.3.0] - 2026-09-20
 
 ### Fixed - Survive intermittent Weather.com API outages
