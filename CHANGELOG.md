@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5] - 2026-10-31
+
+### Changed - Logo banner text
+
+- Dropped "NO PAID API" from the logo subtitle; it now reads `PERSONAL WEATHER STATION DATA`.
+  The claim invited the question it was trying to preempt, and the README already covers it.
+
 ## [0.3.4] - 2026-10-31
 
 ### Changed - Repo renamed, new logo
