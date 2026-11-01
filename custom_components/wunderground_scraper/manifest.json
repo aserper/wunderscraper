@@ -2,10 +2,10 @@
   "domain": "wunderground_scraper",
   "name": "Wunderground Scraper",
   "config_flow": true,
-  "documentation": "https://gitea.amit.wtf/amit/wunderground-theif",
-  "issue_tracker": "https://gitea.amit.wtf/amit/wunderground-theif/issues",
+  "documentation": "https://github.com/aserper/wunderscraper",
+  "issue_tracker": "https://github.com/aserper/wunderscraper/issues",
   "codeowners": ["Amit Serper"],
-  "version": "0.3.2",
+  "version": "0.3.3",
   "iot_class": "cloud_polling",
   "requirements": ["requests"]
 }

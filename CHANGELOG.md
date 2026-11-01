@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.3] - 2026-10-31
+
+### Fixed - Public repo metadata and docs
+
+- `manifest.json` `documentation` and `issue_tracker` pointed at the private Gitea instance;
+  they now point at `github.com/aserper/wunderscraper`, the public mirror.
+- `README.md` and `logo.png` had been committed as unexpanded shell placeholders
+  (`$(cat /tmp/...)`). Both restored, README updated for the 0.3.x reliability behavior.
+
 ## [0.3.2] - 2026-10-31
 
 ### Fixed - Sensor entities refused to be added
