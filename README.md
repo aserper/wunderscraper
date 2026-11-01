@@ -108,6 +108,9 @@ A: The integration only fetches data from Weather.com (same source Wunderground 
 
 ## 🔄 Version History
 
+### v0.3.4 (2026-10-31)
+- Repository renamed to `wunderground-scraper`, new logo (no more pirate artwork)
+
 ### v0.3.3 (2026-10-31)
 - Manifest documentation and issue tracker now point at this GitHub repository
 - Restored the README and logo (a previous commit replaced both with unexpanded shell placeholders)

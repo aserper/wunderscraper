@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.4] - 2026-10-31
+
+### Changed - Repo renamed, new logo
+
+- Repository renamed from `wunderground-theif` to `wunderground-scraper`, and the public GitHub
+  mirror from `wunderground-local-haas` history to `aserper/wunderscraper`. The "theif" joke
+  read as piracy; the integration calls the public PWS API, it does not steal anything.
+- New logo: retro phosphor-terminal radar scope with a weather-station mast feeding data into a
+  collection bin, with the wordmark `WUNDERGROUND SCRAPER`. Replaces the skull-and-crossbones
+  pirate artwork.
+
 ## [0.3.3] - 2026-10-31
 
 ### Fixed - Public repo metadata and docs
